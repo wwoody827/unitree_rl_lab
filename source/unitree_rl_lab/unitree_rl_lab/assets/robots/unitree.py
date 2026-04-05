@@ -19,6 +19,7 @@ from unitree_rl_lab.assets.robots import unitree_actuators
 
 UNITREE_MODEL_DIR = "path/to/unitree_model"  # USD files (Method 1) — not used; URDF method is active instead
 UNITREE_ROS_DIR = "../unitree_ros"  # URDF files (Method 2, recommended for IsaacSim >= 5.0); relative to repo root
+UNITREE_Q1_DIR = os.path.join(os.path.dirname(__file__), "q1")  # Q1 robot assets bundled in this repo
 
 
 @configclass
@@ -715,3 +716,73 @@ for a in UNITREE_G1_29DOF_MIMIC_CFG.actuators.values():
     for n in names:
         if n in e and n in s and s[n]:
             UNITREE_G1_29DOF_MIMIC_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
+
+
+# ── Q1 (YSXSZ) — 10 DOF bipedal, 5 DOF per leg ────────────────────────────
+# Ported from: https://github.com/wwoody827/RoboTamer4Qmini
+# URDF joint order: hip_yaw, hip_roll, hip_pitch, knee_pitch, ankle_pitch (L then R)
+UNITREE_Q1_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUrdfFileCfg(
+        asset_path=f"{UNITREE_Q1_DIR}/urdf/q1.urdf",
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.7),
+        joint_pos={
+            # Default standing pose from RoboTamer4Qmini config
+            "hip_yaw_l":     0.4,
+            "hip_roll_l":   -0.1,
+            "hip_pitch_l":  -1.5,
+            "knee_pitch_l":  1.0,
+            "ankle_pitch_l": -1.3,
+            "hip_yaw_r":    -0.4,
+            "hip_roll_r":    0.1,
+            "hip_pitch_r":   1.5,
+            "knee_pitch_r":  -1.0,
+            "ankle_pitch_r":  1.3,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    soft_joint_pos_limit_factor=0.9,
+    actuators={
+        # PD gains from RoboTamer4Qmini; effort limits from URDF
+        "hip_yaw": IdealPDActuatorCfg(
+            joint_names_expr=["hip_yaw_l", "hip_yaw_r"],
+            stiffness=30.0,
+            damping=0.5,
+            effort_limit=20.0,
+            velocity_limit=30.0,
+        ),
+        "hip_roll": IdealPDActuatorCfg(
+            joint_names_expr=["hip_roll_l", "hip_roll_r"],
+            stiffness=60.0,
+            damping=1.5,
+            effort_limit=60.0,
+            velocity_limit=10.0,
+        ),
+        "hip_pitch": IdealPDActuatorCfg(
+            joint_names_expr=["hip_pitch_l", "hip_pitch_r"],
+            stiffness=100.0,
+            damping=2.5,
+            effort_limit=20.0,
+            velocity_limit=30.0,
+        ),
+        "knee_pitch": IdealPDActuatorCfg(
+            joint_names_expr=["knee_pitch_l", "knee_pitch_r"],
+            stiffness=100.0,
+            damping=2.5,
+            effort_limit=20.0,
+            velocity_limit=30.0,
+        ),
+        "ankle_pitch": IdealPDActuatorCfg(
+            joint_names_expr=["ankle_pitch_l", "ankle_pitch_r"],
+            stiffness=30.0,
+            damping=0.5,
+            effort_limit=20.0,
+            velocity_limit=30.0,
+        ),
+    },
+    joint_sdk_names=[
+        "hip_yaw_l", "hip_roll_l", "hip_pitch_l", "knee_pitch_l", "ankle_pitch_l",
+        "hip_yaw_r", "hip_roll_r", "hip_pitch_r", "knee_pitch_r", "ankle_pitch_r",
+    ],
+)
